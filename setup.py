@@ -5,8 +5,8 @@ from shutil import rmtree
 
 from setuptools import find_packages, setup, Command
 
-NAME = 'business_proposal_generator'
-DESCRIPTION = 'Generate business proposal with LLM.'
+NAME = 'llm_picker'
+DESCRIPTION = 'Just a simple picker for different LLM models.'
 URL = 'https://github.com/zeuscsc/llm_picker.git'
 EMAIL = 'zeuscsc@gmail.com'
 AUTHOR = 'Zeus Chiu'
