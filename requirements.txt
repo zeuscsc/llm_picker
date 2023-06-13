@@ -1,0 +1,6 @@
+openai
+torch
+torchvision
+torchaudio
+transformers
+peft
