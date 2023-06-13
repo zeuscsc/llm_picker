@@ -8,6 +8,6 @@ Just a simple picker for different LLM models
 
 ## Quick Usage
 ~~~shell
-# Install auto_obsidian with pip
+# Install llm_picker with pip
 pip install git+https://github.com/zeuscsc/llm_picker.git
 ~~~
