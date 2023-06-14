@@ -112,6 +112,6 @@ def get_best_available_llm():
     if model is not None:
         instant=LLM(GPT)
     else:
-        from .lora import LoRA
-        instant=LLM(LoRA)
+        from .llama import LLaMA
+        instant=LLM(LLaMA)
     return instant

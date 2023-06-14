@@ -261,7 +261,7 @@ SYSTEM_TAG="<|SYSTEM|>"
 ASSISTANT_TAG="<|ASSISTANT|>"
 USER_TAG="<|USER|>"
 
-class LoRA(LLM_Base):
+class LLaMA(LLM_Base):
     def get_model_name(self):
         base_model=BASE_MODEL
         lora_model=LORA_MODEL
