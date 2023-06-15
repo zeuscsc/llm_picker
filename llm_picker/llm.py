@@ -15,6 +15,7 @@ def calculate_md5(string:str):
     return md5_hash
 
 class _LLM_Base(ABC):
+    separator = ""
     def load_response_cache(model,system,assistant,user):
         try:
             hashed_request=calculate_md5(f"{model}{system}{assistant}{user}")
@@ -82,7 +83,7 @@ class _LLM_Base(ABC):
             for chunk in chunks:
                 response=self.get_response(system,assistant,chunk)
                 if response is not None:
-                    responses+=response
+                    responses+=response+self.separator
                 return responses
     
     pass
@@ -95,8 +96,9 @@ class LLM_Base(_LLM_Base):
     pass
 
 class LLM:
-    def __init__(self,ModelClass:Type[LLM_Base]) -> None:
+    def __init__(self,ModelClass:Type[LLM_Base],separator="") -> None:
         self.model_class=ModelClass(self)
+        self.separator=separator
         pass
     def get_model_name(self):
         return self.model_class.get_model_name()
@@ -106,12 +108,12 @@ class LLM:
         return self.model_class.on_tokens_oversized(e,system,assistant,user)
     pass
 
-def get_best_available_llm():
+def get_best_available_llm(separator=""):
     from .gpt import GPT
     model=GPT.model_picker()
     if model is not None:
-        instant=LLM(GPT)
+        instant=LLM(GPT,separator)
     else:
         from .llama import LLaMA
-        instant=LLM(LLaMA)
+        instant=LLM(LLaMA,separator)
     return instant
