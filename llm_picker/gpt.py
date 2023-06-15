@@ -63,6 +63,12 @@ class GPT(LLM_Base):
                 max_tokens=2048
                 )
             LLM_Base.save_response_cache(model,system,assistant,user,completion)
+            if len(completion.choices)==0:
+                raise Exception("Invalid Output: No choices found in completion")
+            elif "message" not in completion.choices[0]:
+                raise Exception("Invalid Output: No message found in completion")
+            elif "content" not in completion.choices[0].message:
+                raise Exception("Invalid Output: No content found in completion")
             return completion.choices[0].message.content
         except Exception as e:
             print(e)
