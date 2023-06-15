@@ -60,6 +60,7 @@ class GPT(LLM_Base):
                         {"role": "assistant","content": assistant},
                         {"role": "user","content": user}
                     ],
+                max_tokens=2048
                 )
             LLM_Base.save_response_cache(model,system,assistant,user,completion)
             return completion.choices[0].message.content
