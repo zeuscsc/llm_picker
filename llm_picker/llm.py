@@ -84,7 +84,7 @@ class _LLM_Base(ABC):
                 response=self.get_response(system,assistant,chunk)
                 if response is not None:
                     responses+=response+self.separator
-                return responses
+            return responses
     
     pass
 
