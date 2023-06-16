@@ -81,7 +81,10 @@ class _LLM_Base(ABC):
             chunks.extend(_LLM_Base.split_text_in_half(user))
             responses=""
             for chunk in chunks:
-                response=self.get_response(system,assistant,chunk)
+                try:
+                    response=self.get_response(system,assistant,chunk)
+                except Exception as e:
+                    print(e)
                 if response is not None:
                     responses+=response+self.separator
             return responses
