@@ -27,6 +27,7 @@ class CallStack:
     pass
 class _LLM_Base(ABC):
     separator = ""
+    model_name:str=None
     responses_call_stack:list[Type[CallStack]] = []
     def load_response_cache(model,system,assistant,user):
         try:
@@ -73,6 +74,9 @@ class _LLM_Base(ABC):
 
     @abstractmethod
     def get_model_name(self):
+        pass
+    @abstractmethod
+    def set_model_name(self,name):
         pass
     @abstractmethod
     def detect_if_tokens_oversized(self,e):

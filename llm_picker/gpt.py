@@ -35,6 +35,8 @@ class GPT(LLM_Base):
     
     def get_model_name(self):
         return GPT.model_picker()
+    def set_model_name(self, name):
+        self.model_name = name
     def detect_if_tokens_oversized(self,e):
         return (re.search(r"This model's maximum context length is", str(e)) is not None and \
             re.search(r"tokens", str(e)) is not None and \

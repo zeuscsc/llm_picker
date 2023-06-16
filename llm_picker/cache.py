@@ -5,6 +5,8 @@ class Cache(LLM_Base):
     
     def get_model_name(self):
         return self.model_name
+    def set_model_name(self,name):
+        self.model_name=name
     def detect_if_tokens_oversized(self,e):
         return False
     def get_response(self,system,assistant,user):
