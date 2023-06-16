@@ -1,13 +1,11 @@
 import os
 import json
 import datetime
-import re
 import hashlib
 import glob
 from abc import ABC, abstractmethod
 from typing import Type
 from .folders import LLM_RESPONSE_CACHE_FOLDER
-from .cache import Cache
 
 ON_TOKENS_OVERSIZED="on_tokens_oversized"
 
