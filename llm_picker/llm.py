@@ -28,7 +28,7 @@ class CallStack:
 class _LLM_Base(ABC):
     separator = ""
     model_name:str=None
-    responses_call_stack:list[Type[CallStack]] = []
+    responses_calls_history:list[Type[CallStack]] = []
     def load_response_cache(model,system,assistant,user):
         try:
             hashed_request=calculate_md5(f"{model}{system}{assistant}{user}")
@@ -98,7 +98,6 @@ class _LLM_Base(ABC):
                     print(e)
                     continue
                 if response is not None:
-                    self.responses_call_stack.append(CallStack(system,assistant,chunk,response))
                     responses+=response+self.separator
             return responses
     
@@ -118,9 +117,11 @@ class LLM:
     def get_model_name(self):
         return self.model_class.get_model_name()
     def get_response(self,system,assistant,user):
-        return self.model_class.get_response(system,assistant,user)
+        response=self.model_class.get_response(system,assistant,user)
+        self.model_class.responses_calls_history.append(CallStack(system,assistant,user,response))
+        return response
     def get_called_history(self):
-        return self.model_class.responses_call_stack
+        return self.model_class.responses_calls_history
     def on_tokens_oversized(self,e,system,assistant,user):
         return self.model_class.on_tokens_oversized(e,system,assistant,user)
     pass
