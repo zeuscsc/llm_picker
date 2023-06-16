@@ -1,8 +1,6 @@
 from .llm import LLM_Base,ON_TOKENS_OVERSIZED
 
 class Cache(LLM_Base):
-    model_name:str
-    
     def get_model_name(self):
         return self.model_name
     def set_model_name(self,name):
