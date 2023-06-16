@@ -9,6 +9,8 @@ class Cache(LLM_Base):
     
     def get_model_name(self):
         return self.model_name
+    def detect_if_tokens_oversized(self,e):
+        return False
     def get_response(self,system,assistant,user):
         model=self.get_model_name()
         if model is None:
