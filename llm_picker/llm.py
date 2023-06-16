@@ -16,6 +16,7 @@ def calculate_md5(string:str):
 
 class _LLM_Base(ABC):
     separator = ""
+    responses_call_stack = []
     def load_response_cache(model,system,assistant,user):
         try:
             hashed_request=calculate_md5(f"{model}{system}{assistant}{user}")
@@ -82,6 +83,7 @@ class _LLM_Base(ABC):
                     print(e)
                     continue
                 if response is not None:
+                    self.responses_call_stack.append(system,assistant,chunk,response)
                     responses+=response+self.separator
             return responses
     
