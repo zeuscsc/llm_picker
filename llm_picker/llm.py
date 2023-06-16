@@ -14,9 +14,21 @@ def calculate_md5(string:str):
     md5_hash = hashlib.md5(string.encode()).hexdigest()
     return md5_hash
 
+class CallStack:
+    system:str
+    assistant:str
+    user:str
+    response:str
+    def __init__(self,system,assistant,user,response) -> None:
+        self.system=system
+        self.assistant=assistant
+        self.user=user
+        self.response=response
+        pass
+    pass
 class _LLM_Base(ABC):
     separator = ""
-    responses_call_stack = []
+    responses_call_stack:list[Type[CallStack]] = []
     def load_response_cache(model,system,assistant,user):
         try:
             hashed_request=calculate_md5(f"{model}{system}{assistant}{user}")
@@ -83,7 +95,7 @@ class _LLM_Base(ABC):
                     print(e)
                     continue
                 if response is not None:
-                    self.responses_call_stack.append(system,assistant,chunk,response)
+                    self.responses_call_stack.append(CallStack(system,assistant,chunk,response))
                     responses+=response+self.separator
             return responses
     
@@ -95,17 +107,17 @@ class LLM_Base(_LLM_Base):
         self.instant=instant
         pass
     pass
-
 class LLM:
     def __init__(self,ModelClass:Type[LLM_Base],separator="") -> None:
         self.model_class=ModelClass(self)
         self.separator=separator
-        self.responses_call_stack=self.model_class.responses_call_stack
         pass
     def get_model_name(self):
         return self.model_class.get_model_name()
     def get_response(self,system,assistant,user):
         return self.model_class.get_response(system,assistant,user)
+    def get_called_history(self):
+        return self.model_class.responses_call_stack
     def on_tokens_oversized(self,e,system,assistant,user):
         return self.model_class.on_tokens_oversized(e,system,assistant,user)
     pass
