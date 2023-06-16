@@ -81,6 +81,7 @@ class GPT(LLM_Base):
                 LLM_Base.save_response_cache(model,system,assistant,user,{ON_RESULT_FILTERED:str(e)})
                 return None
             else:
+                print(f"Retrying in {self.gpt_error_delay} seconds...")
                 sleep(self.gpt_error_delay)
                 self.gpt_error_delay=self.gpt_error_delay*2
                 return self.instant.get_response(system,assistant,user)
