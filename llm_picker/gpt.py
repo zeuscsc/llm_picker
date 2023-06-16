@@ -44,9 +44,12 @@ class GPT(LLM_Base):
                 return self.instant.on_tokens_oversized(e,system,assistant,user)
             elif ON_RESULT_FILTERED in response_cache:
                 return None
-            elif "choices" in response_cache and len(response_cache["choices"])>0 and "message" in response_cache["choices"][0] and \
-                "content" not in response_cache["choices"][0]["message"]:
-                LLM_Base.delete_response_cache(model,system,assistant,user)
+            else:
+                completion=response_cache
+                if (len(completion.choices)==0 or
+                    "message" not in completion.choices[0] or
+                    "content" not in completion.choices[0].message):
+                    LLM_Base.delete_response_cache(model,system,assistant,user)
         if model=="gpt-3.5-turbo":
             GPT.switch2openai()
         elif model=="gpt-4":
