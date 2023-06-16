@@ -2,6 +2,7 @@ from .llm import LLM_Base,ON_TOKENS_OVERSIZED
 import openai
 from time import sleep
 import os
+import re
 
 GPT3_MODEL = "gpt-3.5-turbo"
 GPT4_MODEL = "gpt-4"
@@ -9,6 +10,16 @@ OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY')
 TECKY_API_KEY = os.environ.get('TECKY_API_KEY')
 
 ON_RESULT_FILTERED="on_result_filtered"
+
+def detect_if_result_filtered(e):
+    return re.search(r"The response was filtered due to the prompt triggering Azure OpenAI’s content management policy.", str(e)) is not None
+
+def detect_if_tokens_oversized(e):
+    return (re.search(r"This model's maximum context length is", str(e)) is not None and \
+        re.search(r"tokens", str(e)) is not None and \
+        re.search(r"Please reduce the length of the messages.", str(e)) is not None) or \
+        (re.search(r"HTTP code 413 from API", str(e)) is not None and \
+            re.search(r"PayloadTooLargeError: request entity too large", str(e)) is not None)
 
 class GPT(LLM_Base):
     gpt_error_delay=2
@@ -74,11 +85,13 @@ class GPT(LLM_Base):
             return completion.choices[0].message.content
         except Exception as e:
             print(e)
-            if LLM_Base.detect_if_tokens_oversized(e):
+            if detect_if_tokens_oversized(e):
                 LLM_Base.save_response_cache(model,system,assistant,user,{ON_TOKENS_OVERSIZED:str(e)})
                 return self.instant.on_tokens_oversized(e,system,assistant,user)
-            elif LLM_Base.detect_if_result_filtered(e):
+            elif detect_if_result_filtered(e):
                 LLM_Base.save_response_cache(model,system,assistant,user,{ON_RESULT_FILTERED:str(e)})
+                return None
+            elif re.search(r"Invalid Output: ", str(e)) is not None:
                 return None
             else:
                 print(f"Retrying in {self.gpt_error_delay} seconds...")
