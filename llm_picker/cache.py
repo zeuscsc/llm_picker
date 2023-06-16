@@ -2,10 +2,6 @@ from .llm import LLM_Base,ON_TOKENS_OVERSIZED
 
 class Cache(LLM_Base):
     model_name:str
-
-    def __init__(self,model_name):
-        self.model_name=model_name
-        pass
     
     def get_model_name(self):
         return self.model_name
