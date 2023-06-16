@@ -7,6 +7,7 @@ import glob
 from abc import ABC, abstractmethod
 from typing import Type
 from .folders import LLM_RESPONSE_CACHE_FOLDER
+from .cache import Cache
 
 ON_TOKENS_OVERSIZED="on_tokens_oversized"
 
@@ -127,7 +128,7 @@ def get_best_available_llm(separator=""):
     model=GPT.model_picker()
     if model is not None:
         instant=LLM(GPT,separator)
-    else:
-        from .llama import LLaMA
-        instant=LLM(LLaMA,separator)
+        return instant
+    from .llama import LLaMA
+    instant=LLM(LLaMA,separator)
     return instant
