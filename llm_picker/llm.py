@@ -85,6 +85,7 @@ class _LLM_Base(ABC):
                     response=self.get_response(system,assistant,chunk)
                 except Exception as e:
                     print(e)
+                    continue
                 if response is not None:
                     responses+=response+self.separator
             return responses
