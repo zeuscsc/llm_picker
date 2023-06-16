@@ -63,11 +63,14 @@ class _LLM_Base(ABC):
     def get_model_name(self):
         pass
     @abstractmethod
+    def detect_if_tokens_oversized(self,e):
+        pass
+    @abstractmethod
     def get_response(self,system,assistant,user):
         pass
 
     def on_tokens_oversized(self,e,system,assistant,user):
-        if _LLM_Base.detect_if_tokens_oversized(e):
+        if self.detect_if_tokens_oversized(e):
             print("Splitting text in half...")
             chunks = []
             chunks.extend(_LLM_Base.split_text_in_half(user))

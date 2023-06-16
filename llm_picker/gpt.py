@@ -14,13 +14,6 @@ ON_RESULT_FILTERED="on_result_filtered"
 def detect_if_result_filtered(e):
     return re.search(r"The response was filtered due to the prompt triggering Azure OpenAI’s content management policy.", str(e)) is not None
 
-def detect_if_tokens_oversized(e):
-    return (re.search(r"This model's maximum context length is", str(e)) is not None and \
-        re.search(r"tokens", str(e)) is not None and \
-        re.search(r"Please reduce the length of the messages.", str(e)) is not None) or \
-        (re.search(r"HTTP code 413 from API", str(e)) is not None and \
-            re.search(r"PayloadTooLargeError: request entity too large", str(e)) is not None)
-
 class GPT(LLM_Base):
     gpt_error_delay=2
 
@@ -39,8 +32,15 @@ class GPT(LLM_Base):
         else:
             return None
 
+    
     def get_model_name(self):
         return GPT.model_picker()
+    def detect_if_tokens_oversized(e):
+        return (re.search(r"This model's maximum context length is", str(e)) is not None and \
+            re.search(r"tokens", str(e)) is not None and \
+            re.search(r"Please reduce the length of the messages.", str(e)) is not None) or \
+            (re.search(r"HTTP code 413 from API", str(e)) is not None and \
+                re.search(r"PayloadTooLargeError: request entity too large", str(e)) is not None)
     def get_response(self,system,assistant,user):
         model=self.get_model_name()
         if model is None:
@@ -85,7 +85,7 @@ class GPT(LLM_Base):
             return completion.choices[0].message.content
         except Exception as e:
             print(e)
-            if detect_if_tokens_oversized(e):
+            if self.detect_if_tokens_oversized(e):
                 LLM_Base.save_response_cache(model,system,assistant,user,{ON_TOKENS_OVERSIZED:str(e)})
                 return self.instant.on_tokens_oversized(e,system,assistant,user)
             elif detect_if_result_filtered(e):
