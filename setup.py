@@ -11,7 +11,7 @@ URL = 'https://github.com/zeuscsc/llm_picker.git'
 EMAIL = 'zeuscsc@gmail.com'
 AUTHOR = 'Zeus Chiu'
 REQUIRES_PYTHON = '>=3.9.0'
-VERSION = '0.1.3'
+VERSION = '0.1.4'
 
 with open('requirements.txt') as f:
     required_packages = f.readlines()
