@@ -100,6 +100,7 @@ class LLM:
     def __init__(self,ModelClass:Type[LLM_Base],separator="") -> None:
         self.model_class=ModelClass(self)
         self.separator=separator
+        self.responses_call_stack=self.model_class.responses_call_stack
         pass
     def get_model_name(self):
         return self.model_class.get_model_name()
