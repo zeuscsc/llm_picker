@@ -266,7 +266,7 @@ class LLaMA(LLM_Base):
         base_model=BASE_MODEL
         lora_model=LORA_MODEL
         return f"{base_model}-{lora_model}".replace("/","-")
-    def detect_if_tokens_oversized(e):
+    def detect_if_tokens_oversized(self,e):
         return (re.search(r"This model's maximum context length is", str(e)) is not None and \
             re.search(r"tokens", str(e)) is not None and \
             re.search(r"Please reduce the length of the messages.", str(e)) is not None) or \
