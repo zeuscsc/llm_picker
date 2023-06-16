@@ -1,5 +1,4 @@
-from .llm import LLM_Base
-from .gpt import ON_TOKENS_OVERSIZED,ON_RESULT_FILTERED
+from .llm import LLM_Base,ON_TOKENS_OVERSIZED
 
 class Cache(LLM_Base):
     model_name:str
@@ -22,8 +21,6 @@ class Cache(LLM_Base):
             elif ON_TOKENS_OVERSIZED in response_cache:
                 e=response_cache[ON_TOKENS_OVERSIZED]
                 return self.instant.on_tokens_oversized(e,system,assistant,user)
-            elif ON_RESULT_FILTERED in response_cache:
-                return None
             else:
                 if (len(response_cache["choices"])==0 or
                     "message" not in response_cache["choices"][0] or
