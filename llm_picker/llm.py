@@ -110,15 +110,17 @@ class LLM_Base(_LLM_Base):
         pass
     pass
 class LLM:
-    def __init__(self,ModelClass:Type[LLM_Base],separator="") -> None:
+    def __init__(self,ModelClass:Type[LLM_Base],separator="",save_call_history=False) -> None:
         self.model_class=ModelClass(self)
         self.separator=separator
+        self.save_call_history=save_call_history
         pass
     def get_model_name(self):
         return self.model_class.get_model_name()
     def get_response(self,system,assistant,user):
         response=self.model_class.get_response(system,assistant,user)
-        self.model_class.responses_calls_history.append(CallStack(system,assistant,user,response))
+        if self.save_call_history:
+            self.model_class.responses_calls_history.append(CallStack(system,assistant,user,response))
         return response
     def get_called_history(self):
         return self.model_class.responses_calls_history
@@ -126,12 +128,12 @@ class LLM:
         return self.model_class.on_tokens_oversized(e,system,assistant,user)
     pass
 
-def get_best_available_llm(separator=""):
+def get_best_available_llm(separator="",save_call_history=False):
     from .gpt import GPT
     model=GPT.model_picker()
     if model is not None:
-        instant=LLM(GPT,separator)
+        instant=LLM(GPT,separator,save_call_history)
         return instant
     from .llama import LLaMA
-    instant=LLM(LLaMA,separator)
+    instant=LLM(LLaMA,separator,save_call_history)
     return instant
