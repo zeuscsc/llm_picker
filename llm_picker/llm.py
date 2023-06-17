@@ -26,10 +26,12 @@ class CallStack:
         pass
     pass
 class _LLM_Base(ABC):
-    # separator = ""
-    # model_name:str=None
-    # save_call_history:bool=False
-    # responses_calls_history:list[Type[CallStack]] = []
+    def __init__(self) -> None:
+        self.separator = ""
+        self.model_name:str=None
+        self.save_call_history:bool=False
+        self.responses_calls_history:list[Type[CallStack]] = []
+        pass
     def load_response_cache(model,system,assistant,user):
         try:
             hashed_request=calculate_md5(f"{model}{system}{assistant}{user}")
@@ -95,8 +97,8 @@ class _LLM_Base(ABC):
             for chunk in chunks:
                 try:
                     response=self.get_response(system,assistant,chunk)
-                    # if self.save_call_history:
-                    #     self.responses_calls_history.append(CallStack(system,assistant,chunk,response))
+                    if self.save_call_history:
+                        self.responses_calls_history.append(CallStack(system,assistant,chunk,response))
                 except Exception as e:
                     print(e)
                     continue
@@ -110,10 +112,6 @@ class _LLM_Base(ABC):
 class LLM_Base(_LLM_Base):
     def __init__(self,instant:_LLM_Base) -> None:
         self.instant=instant
-        self.separator:str = ""
-        self.model_name:str=None
-        self.save_call_history:bool=False
-        self.responses_calls_history:list[Type[CallStack]] = []
         pass
     pass
 class LLM:
@@ -121,14 +119,18 @@ class LLM:
         self.model_class=ModelClass(self)
         self.separator=separator
         self.save_call_history=save_call_history
+        self.responses_calls_history:list[Type[CallStack]] = []
+
+        self.model_class.separator=self.separator
         self.model_class.save_call_history=save_call_history
+        self.model_class.responses_calls_history=self.responses_calls_history
         pass
     def get_model_name(self):
         return self.model_class.get_model_name()
     def get_response(self,system,assistant,user):
         response=self.model_class.get_response(system,assistant,user)
-        if self.save_call_history:
-            self.model_class.responses_calls_history.append(CallStack(system,assistant,user,response))
+        # if self.save_call_history:
+        #     self.model_class.responses_calls_history.append(CallStack(system,assistant,user,response))
         return response
     def get_called_history(self):
         return self.model_class.responses_calls_history
