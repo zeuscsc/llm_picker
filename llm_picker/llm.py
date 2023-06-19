@@ -147,7 +147,7 @@ class LLM:
         return self.model_class.on_tokens_oversized(e,system,assistant,user)
     pass
 
-def get_best_available_llm(use_cache:bool=True,on_each_response:Callable[[Any], None]=None):
+def get_best_available_llm(use_cache:bool=True,on_each_response:Callable[[str,str,str,str,str], str]=None):
     """
     Constructor for LLM class
     :param ModelClass: LLM_Base The class of the model to be used
