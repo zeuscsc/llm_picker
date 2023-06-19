@@ -4,7 +4,7 @@ import datetime
 import hashlib
 import glob
 from abc import ABC, abstractmethod
-from typing import Type
+from typing import Any, Callable, Type
 from .folders import LLM_RESPONSE_CACHE_FOLDER
 
 ON_TOKENS_OVERSIZED="on_tokens_oversized"
@@ -27,11 +27,9 @@ class CallStack:
     pass
 class _LLM_Base(ABC):
     def __init__(self) -> None:
-        self.separator = ""
         self.model_name:str=None
-        self.save_call_history:bool=False
-        self.responses_calls_history:list[Type[CallStack]] = []
         self.use_cache:bool=True
+        self.on_each_response:Type[object]=None
         pass
     def load_response_cache(model,system,assistant,user):
         try:
@@ -98,13 +96,14 @@ class _LLM_Base(ABC):
             for chunk in chunks:
                 try:
                     response=self.get_response(system,assistant,chunk)
-                    if self.save_call_history:
-                        self.responses_calls_history.append(CallStack(system,assistant,chunk,response))
                 except Exception as e:
                     print(e)
                     continue
                 if response is not None:
-                    responses+=response+self.separator
+                    if self.on_each_response is not None:
+                        responses+=response
+                    else:
+                        responses=self.on_each_response(response)
             return responses
     
     pass
@@ -116,37 +115,31 @@ class LLM_Base(_LLM_Base):
         pass
     pass
 class LLM:
-    def __init__(self,ModelClass:Type[LLM_Base],separator="",save_call_history=False,use_cache=True) -> None:
+    def __init__(self,ModelClass:Type[LLM_Base],use_cache:bool=True,on_each_response:Callable[[str], None]=Any) -> None:
         self.model_class=ModelClass(self)
-        self.separator=separator
-        self.save_call_history=save_call_history
-        self.responses_calls_history:list[Type[CallStack]] = []
         self.use_cache=use_cache
+        self.on_each_response=on_each_response
 
-        self.model_class.separator=self.separator
-        self.model_class.save_call_history=save_call_history
-        self.model_class.responses_calls_history=self.responses_calls_history
         self.model_class.use_cache=self.use_cache
+        self.model_class.on_each_response=self.on_each_response
         pass
     def get_model_name(self):
         return self.model_class.get_model_name()
     def get_response(self,system,assistant,user):
-        response=self.model_class.get_response(system,assistant,user)
-        # if self.save_call_history:
-        #     self.model_class.responses_calls_history.append(CallStack(system,assistant,user,response))
-        return response
-    def get_called_history(self):
-        return self.model_class.responses_calls_history
+        if self.on_each_response is not None:
+            return self.on_each_response(self.model_class.get_response(system,assistant,user))
+        else:
+            return self.model_class.get_response(system,assistant,user)
     def on_tokens_oversized(self,e,system,assistant,user):
         return self.model_class.on_tokens_oversized(e,system,assistant,user)
     pass
 
-def get_best_available_llm(separator="",save_call_history=False):
+def get_best_available_llm(use_cache:bool=True,on_each_response:Callable[[Any], None]=None):
     from .gpt import GPT
     model=GPT.model_picker()
     if model is not None:
-        instant=LLM(GPT,separator,save_call_history)
+        instant=LLM(GPT,use_cache,on_each_response)
         return instant
     from .llama import LLaMA
-    instant=LLM(LLaMA,separator,save_call_history)
+    instant=LLM(LLaMA,use_cache,on_each_response)
     return instant
