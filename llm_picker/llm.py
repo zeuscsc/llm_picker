@@ -84,7 +84,7 @@ class _LLM_Base(ABC):
     def detect_if_tokens_oversized(self,e):
         pass
     @abstractmethod
-    def get_response(self,system,assistant,user):
+    def get_response(self,system,assistant,user)->str:
         pass
 
     def on_tokens_oversized(self,e,system,assistant,user):
@@ -100,10 +100,10 @@ class _LLM_Base(ABC):
                     print(e)
                     continue
                 if response is not None:
-                    if self.on_each_response is not None:
+                    if self.on_each_response is None:
                         responses+=response
                     else:
-                        responses=self.on_each_response(response)
+                        responses=self.on_each_response(system,assistant,chunk,responses,response)
             return responses
     
     pass
@@ -115,7 +115,20 @@ class LLM_Base(_LLM_Base):
         pass
     pass
 class LLM:
-    def __init__(self,ModelClass:Type[LLM_Base],use_cache:bool=True,on_each_response:Callable[[str], None]=Any) -> None:
+    def __init__(self,ModelClass:Type[LLM_Base],use_cache:bool=True,on_each_response:Callable[[str,str,str,str,str], str]=None) -> None:
+        """
+        Constructor for LLM class
+        :param ModelClass: LLM_Base The class of the model to be used
+        :param use_cache: bool Whether to use cache or not
+        :param on_each_response: Callable[[str,str,str,str,str], str] A function to be called on each response
+            - This function should take 5 string from get_response or in between on_tokens_oversized: 
+                system,assistant,user,responses,response, and the return value should be a string
+            - for get_response, the responses is None and the response is the current response.
+            - for on_tokens_oversized, the responses is the concatenated string of previous responses and the response is the current response.
+                because the input is too large, on tokens oversized is called recursively, 
+                it has become complicated to get back the concatenated responses.
+            - for system,assistant,user, it will send the string needed to generate current response
+        """
         self.model_class=ModelClass(self)
         self.use_cache=use_cache
         self.on_each_response=on_each_response
@@ -126,10 +139,10 @@ class LLM:
     def get_model_name(self):
         return self.model_class.get_model_name()
     def get_response(self,system,assistant,user):
-        if self.on_each_response is not None:
-            return self.on_each_response(self.model_class.get_response(system,assistant,user))
-        else:
+        if self.on_each_response is None:
             return self.model_class.get_response(system,assistant,user)
+        else:
+            return self.on_each_response(system,assistant,user,None,self.model_class.get_response(system,assistant,user))
     def on_tokens_oversized(self,e,system,assistant,user):
         return self.model_class.on_tokens_oversized(e,system,assistant,user)
     pass
