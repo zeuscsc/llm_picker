@@ -31,6 +31,7 @@ class _LLM_Base(ABC):
         self.model_name:str=None
         self.save_call_history:bool=False
         self.responses_calls_history:list[Type[CallStack]] = []
+        self.use_cache:bool=True
         pass
     def load_response_cache(model,system,assistant,user):
         try:
@@ -115,15 +116,17 @@ class LLM_Base(_LLM_Base):
         pass
     pass
 class LLM:
-    def __init__(self,ModelClass:Type[LLM_Base],separator="",save_call_history=False) -> None:
+    def __init__(self,ModelClass:Type[LLM_Base],separator="",save_call_history=False,use_cache=True) -> None:
         self.model_class=ModelClass(self)
         self.separator=separator
         self.save_call_history=save_call_history
         self.responses_calls_history:list[Type[CallStack]] = []
+        self.use_cache=use_cache
 
         self.model_class.separator=self.separator
         self.model_class.save_call_history=save_call_history
         self.model_class.responses_calls_history=self.responses_calls_history
+        self.model_class.use_cache=self.use_cache
         pass
     def get_model_name(self):
         return self.model_class.get_model_name()
