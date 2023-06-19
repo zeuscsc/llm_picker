@@ -16,8 +16,6 @@ class Cache(LLM_Base):
             if "choices" in response_cache and len(response_cache["choices"])>0 and "message" in response_cache["choices"][0] and \
                 "content" in response_cache["choices"][0]["message"]:
                 response_content=response_cache["choices"][0]["message"]["content"]
-                if self.save_call_history:
-                    self.responses_calls_history.append(CallStack(system,assistant,user,response_content))
                 return response_content
             elif ON_TOKENS_OVERSIZED in response_cache:
                 e=response_cache[ON_TOKENS_OVERSIZED]
