@@ -148,6 +148,19 @@ class LLM:
     pass
 
 def get_best_available_llm(use_cache:bool=True,on_each_response:Callable[[Any], None]=None):
+    """
+    Constructor for LLM class
+    :param ModelClass: LLM_Base The class of the model to be used
+    :param use_cache: bool Whether to use cache or not
+    :param on_each_response: Callable[[str,str,str,str,str], str] A function to be called on each response
+        - This function should take 5 string from get_response or in between on_tokens_oversized: 
+            system,assistant,user,responses,response, and the return value should be a string
+        - for get_response, the responses is None and the response is the current response.
+        - for on_tokens_oversized, the responses is the concatenated string of previous responses and the response is the current response.
+            because the input is too large, on tokens oversized is called recursively, 
+            it has become complicated to get back the concatenated responses.
+        - for system,assistant,user, it will send the string needed to generate current response
+    """
     from .gpt import GPT
     model=GPT.model_picker()
     if model is not None:
