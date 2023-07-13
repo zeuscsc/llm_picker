@@ -5,7 +5,7 @@ import os
 import re
 
 GPT3_MODEL = "gpt-3.5-turbo"
-GPT4_MODEL = "gpt-4-32k"
+GPT4_MODEL = "gpt-4"
 OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY')
 TECKY_API_KEY = os.environ.get('TECKY_API_KEY')
 
