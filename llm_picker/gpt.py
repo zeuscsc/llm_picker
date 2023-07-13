@@ -5,7 +5,7 @@ import os
 import re
 
 GPT3_MODEL = "gpt-3.5-turbo"
-GPT4_MODEL = "gpt-4"
+GPT4_MODEL = "gpt-4-32k"
 OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY')
 TECKY_API_KEY = os.environ.get('TECKY_API_KEY')
 
@@ -34,7 +34,9 @@ class GPT(LLM_Base):
 
     
     def get_model_name(self):
-        return GPT.model_picker()
+        if self.model_name is None:
+            self.model_name = GPT.model_picker()
+        return self.model_name
     def set_model_name(self, name):
         self.model_name = name
     def detect_if_tokens_oversized(self,e):
@@ -63,10 +65,6 @@ class GPT(LLM_Base):
                     "message" not in response_cache["choices"][0] or
                     "content" not in response_cache["choices"][0]["message"]):
                     LLM_Base.delete_response_cache(model,system,assistant,user)
-        if model=="gpt-3.5-turbo":
-            GPT.switch2openai()
-        elif model=="gpt-4":
-            GPT.switch2tecky()
         print(f"Connecting to {model} model...")
         try:
             completion = openai.ChatCompletion.create(
@@ -76,7 +74,7 @@ class GPT(LLM_Base):
                         {"role": "assistant","content": assistant},
                         {"role": "user","content": user}
                     ],
-                max_tokens=2048
+                # max_tokens=2048
                 )
             LLM_Base.save_response_cache(model,system,assistant,user,completion)
             if len(completion.choices)==0:
@@ -101,4 +99,35 @@ class GPT(LLM_Base):
                 sleep(self.gpt_error_delay)
                 self.gpt_error_delay=self.gpt_error_delay*2
                 return self.instant.get_response(system,assistant,user)
+    def get_streaming_response(self, system, assistant, user,on_receive_callback) -> str:
+        """
+        Get a streaming response from the GPT model
+        :param system: The system message
+        :param assistant: The assistant message
+        :param user: The user message
+        :param on_receive_callback: The callback function to receive the streaming response
+            callback function signature: on_receive_callback(response_chunk)
+        :return: The response
+        """
+        model=self.get_model_name()
+        if model is None:
+            raise Exception("No API key found for OpenAI or Tecky")
+        try:
+            response = openai.ChatCompletion.create(
+                model=model,
+                messages=[
+                        {"role": "system","content": system},
+                        {"role": "assistant","content": assistant},
+                        {"role": "user","content": user}
+                    ],
+                temperature=0,
+                stream=True  
+            )
+
+            for chunk in response:
+                on_receive_callback(chunk)
+        except Exception as e:
+            print(e)
+            pass
+        return
     pass

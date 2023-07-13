@@ -86,6 +86,9 @@ class _LLM_Base(ABC):
     @abstractmethod
     def get_response(self,system,assistant,user)->str:
         pass
+    @abstractmethod
+    def get_streaming_response(self,system,assistant,user,on_receive_callback)->str:
+        pass
 
     def on_tokens_oversized(self,e,system,assistant,user):
         if self.detect_if_tokens_oversized(e):
@@ -166,6 +169,6 @@ def get_best_available_llm(use_cache:bool=True,on_each_response:Callable[[str,st
     if model is not None:
         instant=LLM(GPT,use_cache,on_each_response)
         return instant
-    from .llama import LLaMA
-    instant=LLM(LLaMA,use_cache,on_each_response)
+    # from .llama import LLaMA
+    # instant=LLM(LLaMA,use_cache,on_each_response)
     return instant
