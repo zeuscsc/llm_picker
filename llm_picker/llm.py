@@ -30,6 +30,7 @@ class _LLM_Base(ABC):
         self.model_name:str=None
         self.use_cache:bool=True
         self.on_each_response:Type[object]=None
+        self.on_chunked:Type[object]=None
         pass
     def load_response_cache(model,system,assistant,user):
         try:
@@ -52,6 +53,7 @@ class _LLM_Base(ABC):
             json.dump(chat_cache, temp_file, indent=4, ensure_ascii=False)
     def delete_response_cache(model,system,assistant,user):
         hashed_request=calculate_md5(f"{model}{system}{assistant}{user}")
+        print(f"Deleting response cache for {model} model with id: {hashed_request}...")
         matching_files = glob.glob(f"{LLM_RESPONSE_CACHE_FOLDER}/{hashed_request}/*.json")
         for file in matching_files:
             os.remove(file)
@@ -89,7 +91,12 @@ class _LLM_Base(ABC):
     @abstractmethod
     def get_streaming_response(self,system,assistant,user,on_receive_callback)->str:
         pass
-
+    
+    def set_event_listener(self,event_name:str,func:Callable[[Any], Any]):
+        if event_name=="on_chunked":
+            self.on_chunked=func
+        elif event_name=="on_each_response":
+            self.on_each_response=func
     def on_tokens_oversized(self,e,system,assistant,user):
         if self.detect_if_tokens_oversized(e):
             print("Splitting text in half...")
@@ -103,10 +110,10 @@ class _LLM_Base(ABC):
                     print(e)
                     continue
                 if response is not None:
-                    if self.on_each_response is None:
+                    if self.on_chunked is None:
                         responses+=response
                     else:
-                        responses=self.on_each_response(system,assistant,chunk,responses,response)
+                        responses=self.on_chunked(system,assistant,chunk,responses,response)
             return responses
     
     pass
@@ -118,7 +125,9 @@ class LLM_Base(_LLM_Base):
         pass
     pass
 class LLM:
-    def __init__(self,ModelClass:Type[LLM_Base],use_cache:bool=True,on_each_response:Callable[[str,str,str,str,str], str]=None) -> None:
+    def __init__(self,ModelClass:Type[LLM_Base],use_cache:bool=True,
+                 on_each_response:Callable[[str,str,str,str,str], str]=None,
+                 on_chunked:Callable[[str,str,str,str,str], str]=None) -> None:
         """
         Constructor for LLM class
         :param ModelClass: LLM_Base The class of the model to be used
@@ -135,9 +144,11 @@ class LLM:
         self.model_class=ModelClass(self)
         self.use_cache=use_cache
         self.on_each_response=on_each_response
+        self.on_chunked=on_chunked
 
         self.model_class.use_cache=self.use_cache
         self.model_class.on_each_response=self.on_each_response
+        self.model_class.on_chunked=self.on_chunked
         pass
     def get_model_name(self):
         return self.model_class.get_model_name()
@@ -148,27 +159,6 @@ class LLM:
             return self.on_each_response(system,assistant,user,None,self.model_class.get_response(system,assistant,user))
     def on_tokens_oversized(self,e,system,assistant,user):
         return self.model_class.on_tokens_oversized(e,system,assistant,user)
+    def set_event_listener(self,event_name:str,func:Callable[[Any], Any]):
+        self.model_class.set_event_listener(event_name,func)
     pass
-
-def get_best_available_llm(use_cache:bool=True,on_each_response:Callable[[str,str,str,str,str], str]=None):
-    """
-    Constructor for LLM class
-    :param ModelClass: LLM_Base The class of the model to be used
-    :param use_cache: bool Whether to use cache or not
-    :param on_each_response: Callable[[str,str,str,str,str], str] A function to be called on each response
-        - This function should take 5 string from get_response or in between on_tokens_oversized: 
-            system,assistant,user,responses,response, and the return value should be a string
-        - for get_response, the responses is None and the response is the current response.
-        - for on_tokens_oversized, the responses is the concatenated string of previous responses and the response is the current response.
-            because the input is too large, on tokens oversized is called recursively, 
-            it has become complicated to get back the concatenated responses.
-        - for system,assistant,user, it will send the string needed to generate current response
-    """
-    from .gpt import GPT
-    model=GPT.model_picker()
-    if model is not None:
-        instant=LLM(GPT,use_cache,on_each_response)
-        return instant
-    # from .llama import LLaMA
-    # instant=LLM(LLaMA,use_cache,on_each_response)
-    return instant
