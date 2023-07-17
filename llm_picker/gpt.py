@@ -16,6 +16,7 @@ def detect_if_result_filtered(e):
 
 class GPT(LLM_Base):
     gpt_error_delay=2
+    temperature=0
 
     def switch2tecky():
         openai.api_key = TECKY_API_KEY
@@ -74,6 +75,7 @@ class GPT(LLM_Base):
                         {"role": "assistant","content": assistant},
                         {"role": "user","content": user}
                     ],
+                temperature=self.temperature,
                 # max_tokens=2048
                 )
             LLM_Base.save_response_cache(model,system,assistant,user,completion)
