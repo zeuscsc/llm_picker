@@ -4,8 +4,9 @@ import datetime
 import hashlib
 import glob
 from abc import ABC, abstractmethod
-from typing import Any, Callable, Type
-from .folders import LLM_RESPONSE_CACHE_FOLDER
+from typing import Any, Callable, Type,Generator
+from .folders import LLM_RESPONSE_CACHE_FOLDER,LLM_STREAM_RESPONSE_CACHE_FOLDER
+from time import sleep
 
 ON_TOKENS_OVERSIZED="on_tokens_oversized"
 
@@ -45,16 +46,24 @@ class _LLM_Base(ABC):
             print(e)
         return None
     def save_response_cache(model,system,assistant,user,chat_cache):
+        _LLM_Base.save_cache(model,system,assistant,user,chat_cache,LLM_RESPONSE_CACHE_FOLDER)
+    def save_stream_response_cache(model,system,assistant,user,chat_cache):
+        _LLM_Base.save_cache(model,system,assistant,user,chat_cache,LLM_STREAM_RESPONSE_CACHE_FOLDER)
+    def save_cache(model,system,assistant,user,chat_cache,folder_path):
         hashed_request=calculate_md5(f"{model}{system}{assistant}{user}")
-        now = datetime.datetime.now()
-        time_string = now.strftime("%Y%m%d%H%M%S")
-        os.makedirs(f"{LLM_RESPONSE_CACHE_FOLDER}/{hashed_request}", exist_ok=True)
-        with open(f"{LLM_RESPONSE_CACHE_FOLDER}/{hashed_request}/{time_string}.json", "w",encoding="utf8") as temp_file:
-            json.dump(chat_cache, temp_file, indent=4, ensure_ascii=False)
+        matching_files = glob.glob(f"{folder_path}/{hashed_request}/*.json")
+        file_index=len(matching_files)
+        os.makedirs(f"{folder_path}/{hashed_request}", exist_ok=True)
+        with open(f"{folder_path}/{hashed_request}/{file_index}.json", "w",encoding="utf8") as temp_file:
+            json.dump(chat_cache, temp_file, ensure_ascii=False)
     def delete_response_cache(model,system,assistant,user):
+        _LLM_Base.delete_cache(model,system,assistant,user,LLM_RESPONSE_CACHE_FOLDER)
+    def delete_stream_response_cache(model,system,assistant,user):
+        _LLM_Base.delete_cache(model,system,assistant,user,LLM_STREAM_RESPONSE_CACHE_FOLDER)
+    def delete_cache(model,system,assistant,user,folder_path):
         hashed_request=calculate_md5(f"{model}{system}{assistant}{user}")
         print(f"Deleting response cache for {model} model with id: {hashed_request}...")
-        matching_files = glob.glob(f"{LLM_RESPONSE_CACHE_FOLDER}/{hashed_request}/*.json")
+        matching_files = glob.glob(f"{folder_path}/{hashed_request}/*.json")
         for file in matching_files:
             os.remove(file)
     def split_text_in_half_if_too_large(text:str,max_tokens=10000):
@@ -89,14 +98,9 @@ class _LLM_Base(ABC):
     def get_response(self,system,assistant,user)->str:
         pass
     @abstractmethod
-    def get_streaming_response(self,system,assistant,user,on_receive_callback)->str:
+    def get_response_stream(self,system,assistant,user)->Generator[Any,Any,None]:
         pass
     
-    def set_event_listener(self,event_name:str,func:Callable[[Any], Any]):
-        if event_name=="on_chunked":
-            self.on_chunked=func
-        elif event_name=="on_each_response":
-            self.on_each_response=func
     def on_tokens_oversized(self,e,system,assistant,user):
         if self.detect_if_tokens_oversized(e):
             print("Splitting text in half...")
@@ -116,6 +120,20 @@ class _LLM_Base(ABC):
                         responses=self.on_chunked(system,assistant,chunk,responses,response)
             return responses
     
+    def have_stream_response_cache(self,model,system,assistant,user):
+        hashed_request=calculate_md5(f"{model}{system}{assistant}{user}")
+        return os.path.exists(f"{LLM_STREAM_RESPONSE_CACHE_FOLDER}/{hashed_request}")
+
+    def load_stream_response_cache(self,model,system,assistant,user):
+        hashed_request=calculate_md5(f"{model}{system}{assistant}{user}")
+        print(f"Loading response cache for {model} model with id: {hashed_request}...")
+        if self.have_stream_response_cache(model,system,assistant,user):
+            matching_files = glob.glob(f"{LLM_STREAM_RESPONSE_CACHE_FOLDER}/{hashed_request}/*.json")
+            matching_files=sorted(matching_files, key=lambda x: int(x.split("\\")[-1].split(".")[0]))
+            for path in matching_files:
+                with open(path, "r",encoding="utf8") as chat_cache_file:
+                    chat_cache = json.load(chat_cache_file)
+                    yield chat_cache
     pass
 
 
@@ -157,6 +175,9 @@ class LLM:
             return self.model_class.get_response(system,assistant,user)
         else:
             return self.on_each_response(system,assistant,user,None,self.model_class.get_response(system,assistant,user))
+    def get_response_stream(self,system,assistant,user):
+        response=self.model_class.get_response_stream(system,assistant,user)
+        return response
     def on_tokens_oversized(self,e,system,assistant,user):
         return self.model_class.on_tokens_oversized(e,system,assistant,user)
     def set_event_listener(self,event_name:str,func:Callable[[Any], Any]):

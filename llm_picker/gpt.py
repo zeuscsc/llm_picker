@@ -1,6 +1,7 @@
 from .llm import LLM_Base,ON_TOKENS_OVERSIZED,CallStack
 import openai
 from time import sleep
+import time
 import os
 import re
 
@@ -101,16 +102,7 @@ class GPT(LLM_Base):
                 sleep(self.gpt_error_delay)
                 self.gpt_error_delay=self.gpt_error_delay*2
                 return self.instant.get_response(system,assistant,user)
-    def get_streaming_response(self, system, assistant, user,on_receive_callback) -> str:
-        """
-        Get a streaming response from the GPT model
-        :param system: The system message
-        :param assistant: The assistant message
-        :param user: The user message
-        :param on_receive_callback: The callback function to receive the streaming response
-            callback function signature: on_receive_callback(response_chunk)
-        :return: The response
-        """
+    def get_response_stream_from_openai(self, system, assistant, user):
         model=self.get_model_name()
         if model is None:
             raise Exception("No API key found for OpenAI or Tecky")
@@ -123,13 +115,32 @@ class GPT(LLM_Base):
                         {"role": "user","content": user}
                     ],
                 temperature=0,
-                stream=True  
+                stream=True
             )
-
+            # return response
             for chunk in response:
-                on_receive_callback(chunk)
+                yield chunk
+                LLM_Base.save_stream_response_cache(model,system,assistant,user,chunk)
         except Exception as e:
             print(e)
             pass
-        return
+    def get_response_stream(self, system, assistant, user):
+        model=self.get_model_name()
+        """
+        Get a streaming response from the GPT model
+        :param system: The system message
+        :param assistant: The assistant message
+        :param user: The user message
+        :param on_receive_callback: The callback function to receive the streaming response
+            callback function signature: on_receive_callback(response_chunk)
+        :return: The response
+        """
+        if model is None:
+            raise Exception("No API key found for OpenAI or Tecky")
+        if self.have_stream_response_cache(model,system,assistant,user):
+            response_cache=self.load_stream_response_cache(model,system,assistant,user)
+            return response_cache
+        else:
+            response=self.get_response_stream_from_openai(system,assistant,user)
+            return response
     pass
