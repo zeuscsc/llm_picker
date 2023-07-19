@@ -152,7 +152,7 @@ class _LLM_Base(ABC):
                                     }
                             yield chat_cache
                             import shutil
-                            shutil.rmtree({LLM_STREAM_RESPONSE_CACHE_FOLDER}/{hashed_request})
+                            shutil.rmtree(f"{LLM_STREAM_RESPONSE_CACHE_FOLDER}/{hashed_request}")
     pass
 
 
