@@ -134,6 +134,25 @@ class _LLM_Base(ABC):
                 with open(path, "r",encoding="utf8") as chat_cache_file:
                     chat_cache = json.load(chat_cache_file)
                     yield chat_cache
+            if "choices" in chat_cache:
+                if len(chat_cache["choices"])>0:
+                    if "finish_reason" in chat_cache["choices"][0]:
+                        if chat_cache["choices"][0]["finish_reason"]!="stop":
+                            chat_cache={
+                                        "object": "chat.completion.chunk",
+                                        "model": "gpt-4-32k",
+                                        "choices": [
+                                            {
+                                                "index": 0,
+                                                "finish_reason": "stop",
+                                                "delta": {}
+                                            }
+                                        ],
+                                        "usage": None
+                                    }
+                            yield chat_cache
+                            import shutil
+                            shutil.rmtree({LLM_STREAM_RESPONSE_CACHE_FOLDER}/{hashed_request})
     pass
 
 
