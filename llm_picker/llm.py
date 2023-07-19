@@ -129,7 +129,7 @@ class _LLM_Base(ABC):
         print(f"Loading response cache for {model} model with id: {hashed_request}...")
         if self.have_stream_response_cache(model,system,assistant,user):
             matching_files = glob.glob(f"{LLM_STREAM_RESPONSE_CACHE_FOLDER}/{hashed_request}/*.json")
-            matching_files=sorted(matching_files, key=lambda x: int(x.split("\\")[-1].split(".")[0]))
+            matching_files=sorted(matching_files, key=lambda x: int(os.path.basename(x).split(".")[0]))
             for path in matching_files:
                 with open(path, "r",encoding="utf8") as chat_cache_file:
                     chat_cache = json.load(chat_cache_file)
