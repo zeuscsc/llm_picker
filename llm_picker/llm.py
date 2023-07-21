@@ -100,7 +100,13 @@ class _LLM_Base(ABC):
     @abstractmethod
     def get_response_stream(self,system,assistant,user)->Generator[Any,Any,None]:
         pass
-    
+    def set_event_listener(self,event_name:str,func:Callable[[Any], Any]):
+        if event_name=="on_chunked":
+            self.on_chunked=func
+        elif event_name=="on_each_response":
+            self.on_each_response=func
+        elif event_name=="on_tokens_oversized":
+            self.on_tokens_oversized=func
     def on_tokens_oversized(self,e,system,assistant,user):
         if self.detect_if_tokens_oversized(e):
             print("Splitting text in half...")
