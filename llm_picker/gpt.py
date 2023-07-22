@@ -1,3 +1,4 @@
+from typing import Any, Generator
 from .llm import LLM_Base,ON_TOKENS_OVERSIZED,CallStack
 import openai
 from time import sleep
@@ -104,8 +105,6 @@ class GPT(LLM_Base):
                 return self.instant.get_response(system,assistant,user)
     def get_response_stream_from_openai(self, system, assistant, user):
         model=self.get_model_name()
-        if model is None:
-            raise Exception("No API key found for OpenAI or Tecky")
         try:
             response = openai.ChatCompletion.create(
                 model=model,
@@ -117,7 +116,6 @@ class GPT(LLM_Base):
                 temperature=0,
                 stream=True
             )
-            # return response
             for chunk in response:
                 yield chunk
                 LLM_Base.save_stream_response_cache(model,system,assistant,user,chunk)
@@ -131,8 +129,6 @@ class GPT(LLM_Base):
         :param system: The system message
         :param assistant: The assistant message
         :param user: The user message
-        :param on_receive_callback: The callback function to receive the streaming response
-            callback function signature: on_receive_callback(response_chunk)
         :return: The response
         """
         if model is None:
@@ -142,5 +138,36 @@ class GPT(LLM_Base):
             return response_cache
         else:
             response=self.get_response_stream_from_openai(system,assistant,user)
+            return response
+    
+    def get_conversation_stream_from_openai(self, messages):
+        model=self.get_model_name()
+        try:
+            response = openai.ChatCompletion.create(
+                model=model,
+                messages=messages,
+                temperature=0,
+                stream=True
+            )
+            for chunk in response:
+                yield chunk
+                LLM_Base.save_conversation_stream_cache(model,messages,chunk)
+        except Exception as e:
+            print(e)
+            pass
+    def get_conversation_stream(self, messages) -> Generator[Any, Any, None]:
+        model=self.get_model_name()
+        """
+        Get a streaming conversation from the GPT model
+        :param messages: The messages for all system, assistant and user
+        :return: The response
+        """
+        if model is None:
+            raise Exception("No API key found for OpenAI or Tecky")
+        if self.have_conversation_stream_cache(model,messages):
+            response_cache=self.load_conversation_stream_cache(model,messages)
+            return response_cache
+        else:
+            response=self.get_conversation_stream_from_openai(messages)
             return response
     pass

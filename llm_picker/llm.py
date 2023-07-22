@@ -5,10 +5,22 @@ import hashlib
 import glob
 from abc import ABC, abstractmethod
 from typing import Any, Callable, Type,Generator
-from .folders import LLM_RESPONSE_CACHE_FOLDER,LLM_STREAM_RESPONSE_CACHE_FOLDER
+from .folders import LLM_RESPONSE_CACHE_FOLDER,LLM_STREAM_RESPONSE_CACHE_FOLDER,LLM_CONVERSATION_STREAM_CACHE_FOLDER
 from time import sleep
 
 ON_TOKENS_OVERSIZED="on_tokens_oversized"
+COMPLETED_STREAM_CACHE={
+    "object": "chat.completion.chunk",
+    "model": "gpt-4-32k",
+    "choices": [
+        {
+            "index": 0,
+            "finish_reason": "stop",
+            "delta": {}
+        }
+    ],
+    "usage": None
+}
 
 def calculate_md5(string:str):
     md5_hash = hashlib.md5(string.encode()).hexdigest()
@@ -46,11 +58,15 @@ class _LLM_Base(ABC):
             print(e)
         return None
     def save_response_cache(model,system,assistant,user,chat_cache):
-        _LLM_Base.save_cache(model,system,assistant,user,chat_cache,LLM_RESPONSE_CACHE_FOLDER)
-    def save_stream_response_cache(model,system,assistant,user,chat_cache):
-        _LLM_Base.save_cache(model,system,assistant,user,chat_cache,LLM_STREAM_RESPONSE_CACHE_FOLDER)
-    def save_cache(model,system,assistant,user,chat_cache,folder_path):
         hashed_request=calculate_md5(f"{model}{system}{assistant}{user}")
+        _LLM_Base.save_cache(model,hashed_request,chat_cache,LLM_RESPONSE_CACHE_FOLDER)
+    def save_stream_response_cache(model,system,assistant,user,chat_cache):
+        hashed_request=calculate_md5(f"{model}{system}{assistant}{user}")
+        _LLM_Base.save_cache(model,hashed_request,chat_cache,LLM_STREAM_RESPONSE_CACHE_FOLDER)
+    def save_conversation_stream_cache(model,messages,chat_cache):
+        hashed_request=calculate_md5(f"{model}{json.dumps(messages)}")
+        _LLM_Base.save_cache(model,hashed_request,chat_cache,LLM_CONVERSATION_STREAM_CACHE_FOLDER)
+    def save_cache(model,hashed_request,chat_cache,folder_path):
         matching_files = glob.glob(f"{folder_path}/{hashed_request}/*.json")
         file_index=len(matching_files)
         os.makedirs(f"{folder_path}/{hashed_request}", exist_ok=True)
@@ -100,6 +116,9 @@ class _LLM_Base(ABC):
     @abstractmethod
     def get_response_stream(self,system,assistant,user)->Generator[Any,Any,None]:
         pass
+    @abstractmethod
+    def get_conversation_stream(self,messages)->Generator[Any,Any,None]:
+        pass
     def set_event_listener(self,event_name:str,func:Callable[[Any], Any]):
         if event_name=="on_chunked":
             self.on_chunked=func
@@ -107,6 +126,15 @@ class _LLM_Base(ABC):
             self.on_each_response=func
         elif event_name=="on_tokens_oversized":
             self.on_tokens_oversized=func
+    
+    def is_incomplete_stream_cache(chat_cache):
+        if "choices" in chat_cache:
+            if len(chat_cache["choices"])>0:
+                if "finish_reason" in chat_cache["choices"][0]:
+                    if chat_cache["choices"][0]["finish_reason"]!="stop":
+                        return True
+        return False
+    
     def on_tokens_oversized(self,e,system,assistant,user):
         if self.detect_if_tokens_oversized(e):
             print("Splitting text in half...")
@@ -129,7 +157,6 @@ class _LLM_Base(ABC):
     def have_stream_response_cache(self,model,system,assistant,user):
         hashed_request=calculate_md5(f"{model}{system}{assistant}{user}")
         return os.path.exists(f"{LLM_STREAM_RESPONSE_CACHE_FOLDER}/{hashed_request}")
-
     def load_stream_response_cache(self,model,system,assistant,user):
         hashed_request=calculate_md5(f"{model}{system}{assistant}{user}")
         print(f"Loading response cache for {model} model with id: {hashed_request}...")
@@ -140,25 +167,31 @@ class _LLM_Base(ABC):
                 with open(path, "r",encoding="utf8") as chat_cache_file:
                     chat_cache = json.load(chat_cache_file)
                     yield chat_cache
-            if "choices" in chat_cache:
-                if len(chat_cache["choices"])>0:
-                    if "finish_reason" in chat_cache["choices"][0]:
-                        if chat_cache["choices"][0]["finish_reason"]!="stop":
-                            chat_cache={
-                                        "object": "chat.completion.chunk",
-                                        "model": "gpt-4-32k",
-                                        "choices": [
-                                            {
-                                                "index": 0,
-                                                "finish_reason": "stop",
-                                                "delta": {}
-                                            }
-                                        ],
-                                        "usage": None
-                                    }
-                            yield chat_cache
-                            import shutil
-                            shutil.rmtree(f"{LLM_STREAM_RESPONSE_CACHE_FOLDER}/{hashed_request}")
+            if self.is_incomplete_stream_cache(chat_cache):
+                chat_cache=COMPLETED_STREAM_CACHE
+                yield chat_cache
+                import shutil
+                shutil.rmtree(f"{LLM_STREAM_RESPONSE_CACHE_FOLDER}/{hashed_request}")
+    
+    def have_conversation_stream_cache(self,model,messages:list):
+        hashed_request=calculate_md5(f"{model}{json.dumps(messages)}")
+        return os.path.exists(f"{LLM_STREAM_RESPONSE_CACHE_FOLDER}/{hashed_request}")
+    def load_conversation_stream_cache(self,model,messages:list):
+        hashed_request=calculate_md5(f"{model}{json.dumps(messages)}")
+        print(f"Loading response cache for {model} model with id: {hashed_request}...")
+        if self.have_conversation_stream_cache(model,messages):
+            matching_files = glob.glob(f"{LLM_CONVERSATION_STREAM_CACHE_FOLDER}/{hashed_request}/*.json")
+            matching_files=sorted(matching_files, key=lambda x: int(os.path.basename(x).split(".")[0]))
+            for path in matching_files:
+                with open(path, "r",encoding="utf8") as chat_cache_file:
+                    chat_cache = json.load(chat_cache_file)
+                    yield chat_cache
+            if self.is_incomplete_stream_cache(chat_cache):
+                chat_cache=COMPLETED_STREAM_CACHE
+                yield chat_cache
+                import shutil
+                shutil.rmtree(f"{LLM_CONVERSATION_STREAM_CACHE_FOLDER}/{hashed_request}")
+
     pass
 
 
@@ -203,6 +236,8 @@ class LLM:
     def get_response_stream(self,system,assistant,user):
         response=self.model_class.get_response_stream(system,assistant,user)
         return response
+    def get_conversation_stream(self,messages):
+        return self.model_class.get_conversation_stream(messages)
     def on_tokens_oversized(self,e,system,assistant,user):
         return self.model_class.on_tokens_oversized(e,system,assistant,user)
     def set_event_listener(self,event_name:str,func:Callable[[Any], Any]):
