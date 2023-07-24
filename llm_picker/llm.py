@@ -127,7 +127,7 @@ class _LLM_Base(ABC):
         elif event_name=="on_tokens_oversized":
             self.on_tokens_oversized=func
     
-    def is_incomplete_stream_cache(chat_cache):
+    def is_incomplete_stream_cache(self,chat_cache):
         if "choices" in chat_cache:
             if len(chat_cache["choices"])>0:
                 if "finish_reason" in chat_cache["choices"][0]:
